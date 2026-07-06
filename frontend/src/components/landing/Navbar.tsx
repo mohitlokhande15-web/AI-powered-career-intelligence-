@@ -9,9 +9,10 @@ export default function Navbar() {
             CI
           </div>
 
-          <span className="text-lg font-semibold tracking-tight text-neutral-950">
-            Career Intelligence
-          </span>
+          <span className="text-base font-semibold tracking-tight text-neutral-950 sm:text-lg">
+  <span className="sm:hidden">Career AI</span>
+  <span className="hidden sm:inline">Career Intelligence</span>
+</span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
