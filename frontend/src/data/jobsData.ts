@@ -2,7 +2,7 @@ import { Job } from "@/types/job";
 
 export const jobs: Job[] = [
   {
-    id: 1,
+    id: "1",
     initials: "NS",
     company: "Nova Systems",
     title: "Junior Data Analyst",
@@ -15,7 +15,7 @@ export const jobs: Job[] = [
       "Analyse business data, identify trends, and support reporting and dashboard development.",
   },
   {
-    id: 2,
+    id: "2",
     initials: "VS",
     company: "Vertex Systems",
     title: "Business Intelligence Analyst",
@@ -28,7 +28,7 @@ export const jobs: Job[] = [
       "Support business intelligence reporting and translate operational data into actionable insights.",
   },
   {
-    id: 3,
+    id: "3",
     initials: "OT",
     company: "Orbit Technologies",
     title: "Graduate Data Analyst",
@@ -41,7 +41,7 @@ export const jobs: Job[] = [
       "Work with analytics teams to clean data, create reports, and communicate business insights.",
   },
   {
-    id: 4,
+    id: "4",
     initials: "ND",
     company: "Northstar Digital",
     title: "Associate Analytics Consultant",
