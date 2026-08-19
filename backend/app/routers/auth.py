@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas, auth as auth_utils
 
+import secrets
+from datetime import datetime, timedelta
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 REFRESH_COOKIE_NAME = "refresh_token"
@@ -99,3 +102,36 @@ def change_password(
 @router.get("/me", response_model=schemas.UserOut)
 def me(current_user: models.User = Depends(auth_utils.get_current_user)):
     return current_user
+
+# In-memory store for simplicity (resets on server restart — fine for basic version)
+reset_tokens = {}
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    if not user:
+        return {"message": "If that email exists, a reset link has been generated."}
+
+    token = secrets.token_urlsafe(32)
+    reset_tokens[token] = {"user_id": user.id, "expires": datetime.utcnow() + timedelta(minutes=30)}
+
+    reset_link = f"https://ai-powered-career-intelligence-g8y7.vercel.app/reset-password?token={token}"
+    return {"message": "Reset link generated.", "reset_link": reset_link}
+
+
+@router.post("/reset-password")
+def reset_password(payload: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    entry = reset_tokens.get(payload.token)
+    if not entry or entry["expires"] < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.query(models.User).filter(models.User.id == entry["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.hashed_password = auth_utils.hash_password(payload.new_password)
+    db.commit()
+    del reset_tokens[payload.token]
+
+    return {"message": "Password reset successful"}
