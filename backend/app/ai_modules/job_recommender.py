@@ -4,8 +4,9 @@ Job recommendations via the Adzuna API (Module 4).
 Strategy:
 - Build a search query from the candidate's top resume skills (+ optional target role)
 - Query Adzuna's /jobs/{country}/search/1 endpoint
-- Score each returned job against the candidate's skill set (simple keyword overlap
-  against title + description, since Adzuna doesn't return a structured skills list)
+- Score each returned job against the candidate's skill set (keyword overlap
+  against title + category + description, since Adzuna doesn't return a
+  structured skills list)
 - Filter by location if provided
 - On any API failure (network, auth, rate limit, empty key), fall back to a small
   static list so the frontend never breaks
@@ -58,13 +59,24 @@ def _build_query(resume_skills: List[str], target_role: Optional[str] = None) ->
 
 def _score_job(job_text: str, resume_skills: List[str]) -> Dict:
     """
-    Keyword overlap between the candidate's skills and the job's title+description.
-    Adzuna doesn't return a structured skill list, so this is a best-effort proxy.
+    Keyword overlap between the candidate's skills and the job's title+category+description.
+    Short skills (<=4 chars, e.g. "SQL", "R", "AI") use word-boundary matching to
+    avoid false positives (e.g. "R" inside "Research"). Longer skills use substring
+    matching so variations like "JavaScript/TS" or "Machine Learning Engineer"
+    still count.
     """
     text_lower = job_text.lower()
-    matched = [s for s in resume_skills if re.search(rf"\b{re.escape(s.lower())}\b", text_lower)]
-    missing = [s for s in resume_skills if s not in matched]
+    matched = []
+    for skill in resume_skills:
+        skill_lower = skill.lower()
+        if len(skill_lower) <= 4:
+            if re.search(rf"\b{re.escape(skill_lower)}\b", text_lower):
+                matched.append(skill)
+        else:
+            if skill_lower in text_lower:
+                matched.append(skill)
 
+    missing = [s for s in resume_skills if s not in matched]
     match_pct = round((len(matched) / len(resume_skills)) * 100) if resume_skills else 0
     return {"matched": matched, "missing": missing, "match": match_pct}
 
@@ -113,7 +125,8 @@ def fetch_job_recommendations(
         company = (item.get("company") or {}).get("display_name", "Unknown company")
         loc = (item.get("location") or {}).get("display_name", "Not specified")
         description = item.get("description", "")
-        job_text = f"{title} {description}"
+        category = (item.get("category") or {}).get("label", "")
+        job_text = f"{title} {category} {description}"
 
         scoring = _score_job(job_text, resume_skills)
 
